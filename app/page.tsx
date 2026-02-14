@@ -17,49 +17,53 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-  const getSession = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
+    const initSession = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
 
-    if (!session) {
-      window.location.href = "/";
-      return;
-    }
-
-    setUser(session.user);
-    fetchBookmarks(session.user.id);
-  };
-
-  getSession();
-
-  const { data: listener } = supabase.auth.onAuthStateChange(
-    (_event, session) => {
-      if (session) {
-        setUser(session.user);
-        fetchBookmarks(session.user.id);
+      if (!session) {
+        window.location.href = "/";
+        return;
       }
-    }
-  );
 
-  return () => {
-    listener.subscription.unsubscribe();
-  };
-}, []);
+      setUser(session.user);
+      await fetchBookmarks(session.user.id);
+      setLoading(false);
+    };
 
+    initSession();
 
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        if (session) {
+          setUser(session.user);
+          fetchBookmarks(session.user.id);
+        } else {
+          window.location.href = "/";
+        }
+      }
+    );
 
+    return () => {
+      listener.subscription.unsubscribe();
+    };
+  }, []);
 
   const fetchBookmarks = async (userId: string) => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("bookmarks")
       .select("*")
       .eq("user_id", userId)
       .order("created_at", { ascending: false });
 
-    if (data) setBookmarks(data);
+    if (!error && data) {
+      setBookmarks(data);
+    }
   };
 
   const handleAddBookmark = async () => {
-    if (!title || !url) return;
+    if (!title || !url || !user) return;
 
     await supabase.from("bookmarks").insert([
       {
@@ -75,12 +79,13 @@ export default function Dashboard() {
   };
 
   const handleDelete = async (id: string) => {
+    if (!user) return;
+
     await supabase.from("bookmarks").delete().eq("id", id);
     fetchBookmarks(user.id);
   };
 
   if (loading) return <p className="p-10">Loading...</p>;
-
   if (!user) return null;
 
   return (
@@ -134,6 +139,7 @@ export default function Dashboard() {
               <a
                 href={bookmark.url}
                 target="_blank"
+                rel="noopener noreferrer"
                 className="text-blue-500 text-sm"
               >
                 {bookmark.url}
