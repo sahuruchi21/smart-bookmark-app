@@ -17,10 +17,8 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const initSession = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+    const initialize = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
 
       if (!session) {
         window.location.href = "/";
@@ -32,38 +30,34 @@ export default function Dashboard() {
       setLoading(false);
     };
 
-    initSession();
+    initialize();
 
-    const { data: listener } = supabase.auth.onAuthStateChange(
+    const { data: subscription } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         if (session) {
           setUser(session.user);
           fetchBookmarks(session.user.id);
-        } else {
-          window.location.href = "/";
         }
       }
     );
 
     return () => {
-      listener.subscription.unsubscribe();
+      subscription.subscription.unsubscribe();
     };
   }, []);
 
   const fetchBookmarks = async (userId: string) => {
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from("bookmarks")
       .select("*")
       .eq("user_id", userId)
       .order("created_at", { ascending: false });
 
-    if (!error && data) {
-      setBookmarks(data);
-    }
+    if (data) setBookmarks(data);
   };
 
   const handleAddBookmark = async () => {
-    if (!title || !url || !user) return;
+    if (!title || !url) return;
 
     await supabase.from("bookmarks").insert([
       {
@@ -79,8 +73,6 @@ export default function Dashboard() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!user) return;
-
     await supabase.from("bookmarks").delete().eq("id", id);
     fetchBookmarks(user.id);
   };
@@ -139,7 +131,6 @@ export default function Dashboard() {
               <a
                 href={bookmark.url}
                 target="_blank"
-                rel="noopener noreferrer"
                 className="text-blue-500 text-sm"
               >
                 {bookmark.url}
