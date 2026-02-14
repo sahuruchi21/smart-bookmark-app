@@ -17,36 +17,36 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const getSession = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+  const getSession = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
 
-      if (!session) {
-        window.location.href = "/";
-      } else {
-        setUser(session.user);
-        fetchBookmarks(session.user.id);
-      }
+    if (!session) {
+      window.location.href = "/";
+      return;
+    }
 
-      setLoading(false);
-    };
+    setUser(session.user);
+    fetchBookmarks(session.user.id);
+  };
 
-    getSession();
+  getSession();
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+  const { data: listener } = supabase.auth.onAuthStateChange(
+    (_event, session) => {
       if (session) {
         setUser(session.user);
         fetchBookmarks(session.user.id);
       }
-    });
+    }
+  );
 
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, []);
+  return () => {
+    listener.subscription.unsubscribe();
+  };
+}, []);
+
+
+
 
   const fetchBookmarks = async (userId: string) => {
     const { data } = await supabase
