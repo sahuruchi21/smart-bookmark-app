@@ -5,18 +5,22 @@ import { supabase } from "@/lib/supabase";
 
 export default function Dashboard() {
   const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const getUser = async () => {
-      const { data } = await supabase.auth.getUser();
-      if (!data.user) {
+    const checkUser = async () => {
+      const { data, error } = await supabase.auth.getUser();
+
+      if (error || !data.user) {
         window.location.href = "/";
-      } else {
-        setUser(data.user);
+        return;
       }
+
+      setUser(data.user);
+      setLoading(false);
     };
 
-    getUser();
+    checkUser();
   }, []);
 
   const handleLogout = async () => {
@@ -24,7 +28,9 @@ export default function Dashboard() {
     window.location.href = "/";
   };
 
-  if (!user) return <p className="p-10">Loading...</p>;
+  if (loading) {
+    return <p className="p-10">Loading...</p>;
+  }
 
   return (
     <div className="p-10">
@@ -38,7 +44,9 @@ export default function Dashboard() {
         </button>
       </div>
 
-      <p className="mt-4 text-gray-600">Logged in as: {user.email}</p>
+      <p className="mt-4 text-gray-600">
+        Logged in as: {user.email}
+      </p>
     </div>
   );
 }
